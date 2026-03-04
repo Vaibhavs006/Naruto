@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Naruto Hand Jutsu</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+</head>
+<body>
+  <!-- Character Select Screen -->
+  <div id="charSelect">
+    <div class="select-title">Choose Your Ninja</div>
+    <div class="select-subtitle">Select a character to begin</div>
+    <div class="char-grid" id="charGrid"></div>
+  </div>
+
+  <!-- Loading Screen -->
+  <div id="loading" style="display:none;">
+    <h1>Naruto</h1>
+    <div class="loader-ring"></div>
+    <p>Preparing jutsu…</p>
+  </div>
+
+  <!-- Flash overlay -->
+  <div id="flash"></div>
+
+  <!-- Cinematic letterbox -->
+  <div class="letterbox top"></div>
+  <div class="letterbox bottom"></div>
+
+  <!-- Camera & canvases -->
+  <video id="v_src" autoplay playsinline></video>
+  <canvas id="out"></canvas>
+  <canvas id="particles"></canvas>
+  <div class="darkness"></div>
+  <div class="vignette"></div>
+
+  <!-- FX videos -->
+  <video id="n" class="fx" src="assets/naruto.mp4" muted autoplay loop playsinline></video>
+  <video id="s" class="fx" src="assets/sasuke.mp4" muted autoplay loop playsinline></video>
+
+  <!-- HUD -->
+  <div class="hud hud-title">Hand Jutsu</div>
+
+  <div class="hud instructions" id="instructions"></div>
+
+  <div class="hud power-bars">
+    <div class="power-bar">
+      <div class="label">Left Hand</div>
+      <div class="bar-track"><div class="bar-fill rasengan" id="bar-l"></div></div>
+      <div class="pose-label" id="pose-label-l">—</div>
+    </div>
+    <div class="power-bar">
+      <div class="label">Right Hand</div>
+      <div class="bar-track"><div class="bar-fill chidori" id="bar-r"></div></div>
+      <div class="pose-label" id="pose-label-r">—</div>
+    </div>
+  </div>
+
+  <!-- JS Modules (order matters) -->
+  <script src="js/characters.js"></script>
+  <script src="js/particles.js"></script>
+  <script src="js/effects.js"></script>
+  <script src="js/handTracking.js"></script>
+  <script src="js/hud.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

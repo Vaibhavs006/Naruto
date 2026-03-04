@@ -1,0 +1,403 @@
+/* ─── Reset ─── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --accent: #ff6a00;
+  --accent-glow: #ffaa00;
+  --accent-rgb: 255,106,0;
+}
+
+body {
+  overflow: hidden;
+  background: #000;
+  font-family: 'Cinzel', serif;
+  user-select: none;
+}
+
+/* ═══════════════════════════════════════════
+   CHARACTER SELECT SCREEN
+   ═══════════════════════════════════════════ */
+#charSelect {
+  position: fixed; inset: 0; z-index: 2000;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  background: radial-gradient(ellipse at center, #0d0d0d 0%, #000 80%);
+  transition: opacity 0.6s ease, visibility 0.6s ease;
+}
+#charSelect.hide {
+  opacity: 0; visibility: hidden; pointer-events: none;
+}
+
+.select-title {
+  font-size: clamp(1.4rem, 4vw, 3rem);
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, #ff6a00, #ffcc00, #ff6a00);
+  background-size: 200% 200%;
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 2.5s ease infinite;
+  margin-bottom: 0.4rem;
+}
+
+.select-subtitle {
+  font-size: clamp(0.6rem, 1.2vw, 0.85rem);
+  color: rgba(255,200,150,0.4);
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  margin-bottom: 2.5rem;
+}
+
+/* Card grid */
+.char-grid {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 900px;
+  padding: 0 20px;
+}
+
+/* Individual card */
+.char-card {
+  position: relative;
+  width: 140px;
+  padding: 28px 16px 20px;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 16px;
+  background: rgba(255,255,255,0.02);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.char-card::before {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: 16px;
+  background: radial-gradient(ellipse at 50% 0%, var(--card-accent, rgba(255,255,255,0.03)) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.35s;
+}
+
+.char-card:hover {
+  border-color: var(--card-accent, rgba(255,255,255,0.15));
+  transform: translateY(-6px) scale(1.03);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.5),
+              0 0 30px var(--card-accent, rgba(255,255,255,0.05));
+}
+.char-card:hover::before { opacity: 1; }
+
+.char-card .char-emoji {
+  font-size: 2.2rem;
+  line-height: 1;
+  position: relative;
+  z-index: 1;
+}
+
+.char-card .char-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  position: relative;
+  z-index: 1;
+}
+
+.char-card .char-role {
+  font-size: 0.5rem;
+  color: rgba(255,255,255,0.35);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  text-align: center;
+  line-height: 1.4;
+  position: relative;
+  z-index: 1;
+}
+
+.char-card .char-jutsu-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+  margin-top: 4px;
+}
+
+.char-card .jutsu-tag {
+  font-size: 0.42rem;
+  padding: 2px 6px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.5);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* Specific card accent colors */
+.char-card[data-char="naruto"]  { --card-accent: rgba(255,106,0,0.2); }
+.char-card[data-char="sasuke"]  { --card-accent: rgba(168,85,247,0.2); }
+.char-card[data-char="kakashi"] { --card-accent: rgba(148,163,184,0.2); }
+.char-card[data-char="sakura"]  { --card-accent: rgba(236,72,153,0.2); }
+.char-card[data-char="itachi"]  { --card-accent: rgba(220,38,38,0.2); }
+
+.char-card[data-char="naruto"]:hover  { --card-accent: rgba(255,106,0,0.35); }
+.char-card[data-char="sasuke"]:hover  { --card-accent: rgba(168,85,247,0.35); }
+.char-card[data-char="kakashi"]:hover { --card-accent: rgba(148,163,184,0.35); }
+.char-card[data-char="sakura"]:hover  { --card-accent: rgba(236,72,153,0.35); }
+.char-card[data-char="itachi"]:hover  { --card-accent: rgba(220,38,38,0.35); }
+
+/* Entry animation for cards */
+.char-card {
+  opacity: 0;
+  transform: translateY(30px);
+  animation: cardIn 0.5s ease forwards;
+}
+.char-card:nth-child(1) { animation-delay: 0.1s; }
+.char-card:nth-child(2) { animation-delay: 0.2s; }
+.char-card:nth-child(3) { animation-delay: 0.3s; }
+.char-card:nth-child(4) { animation-delay: 0.4s; }
+.char-card:nth-child(5) { animation-delay: 0.5s; }
+
+@keyframes cardIn {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Sakura bar color */
+.bar-fill.sakura {
+  background: linear-gradient(90deg, #ec4899, #f472b6, #f9a8d4);
+  box-shadow: 0 0 12px rgba(236,72,153,0.6);
+}
+
+/* ─── Loading Screen ─── */
+#loading {
+  position: fixed; inset: 0; z-index: 1000;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  background: radial-gradient(ellipse at center, #1a0a00 0%, #000 70%);
+  transition: opacity 0.8s ease, visibility 0.8s ease;
+}
+#loading.hide { opacity: 0; visibility: hidden; pointer-events: none; }
+
+#loading h1 {
+  font-size: clamp(2rem, 6vw, 5rem);
+  font-weight: 900;
+  background: linear-gradient(135deg, #ff6a00, #ffcc00, #ff6a00);
+  background-size: 200% 200%;
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 2.5s ease infinite;
+  text-shadow: none;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+@keyframes shimmer {
+  0%,100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.loader-ring {
+  margin-top: 2rem;
+  width: 60px; height: 60px;
+  border: 4px solid rgba(255,106,0,0.15);
+  border-top-color: #ff6a00;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+#loading p {
+  margin-top: 1.2rem;
+  color: rgba(255,200,150,0.6);
+  font-size: 0.9rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+
+/* ─── Camera & Canvas ─── */
+#v_src, #out {
+  position: absolute; top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  object-fit: cover; transform: scaleX(-1);
+}
+#out { z-index: 2; pointer-events: none; }
+
+/* ─── Particle canvas ─── */
+#particles {
+  position: absolute; inset: 0;
+  z-index: 3; pointer-events: none;
+}
+
+/* ─── Cinematic overlay ─── */
+.darkness {
+  position: absolute; inset: 0;
+  background: rgba(10, 5, 0, 0.25);
+  mix-blend-mode: multiply;
+  pointer-events: none; z-index: 5;
+}
+
+/* ─── Vignette ─── */
+.vignette {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.6) 100%);
+  pointer-events: none; z-index: 6;
+}
+
+/* ─── FX videos ─── */
+.fx {
+  position: absolute; height: auto; top: 0; left: 0;
+  transform: translate(-50%, -50%);
+  pointer-events: none; display: none;
+  mix-blend-mode: screen; z-index: 20;
+}
+#n { width: 1600px; }
+#s { width: 2400px; }
+
+/* ─── HUD ─── */
+.hud {
+  position: fixed; z-index: 50;
+  pointer-events: none;
+  color: rgba(255,255,255,0.85);
+}
+
+/* Title bar */
+.hud-title {
+  top: 20px; left: 50%; transform: translateX(-50%);
+  font-size: clamp(0.9rem, 2vw, 1.4rem);
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  opacity: 0.5;
+  transition: opacity 0.5s;
+}
+
+/* Power bars */
+.power-bars {
+  bottom: 40px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 40px;
+  align-items: flex-end;
+}
+
+.power-bar {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 8px;
+}
+
+.power-bar .label {
+  font-size: 0.65rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.bar-track {
+  width: 140px; height: 6px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.bar-fill {
+  height: 100%; width: 0%;
+  border-radius: 3px;
+  transition: width 0.1s ease-out;
+}
+
+.bar-fill.rasengan {
+  background: linear-gradient(90deg, #00b4ff, #00e5ff, #80f0ff);
+  box-shadow: 0 0 12px rgba(0,180,255,0.6);
+}
+.bar-fill.chidori {
+  background: linear-gradient(90deg, #a855f7, #c084fc, #e0b0ff);
+  box-shadow: 0 0 12px rgba(168,85,247,0.6);
+}
+.bar-fill.fireball {
+  background: linear-gradient(90deg, #ff4500, #ff6a00, #ffaa00);
+  box-shadow: 0 0 12px rgba(255,106,0,0.6);
+}
+.bar-fill.shadowclone {
+  background: linear-gradient(90deg, #06b6d4, #22d3ee, #67e8f9);
+  box-shadow: 0 0 12px rgba(34,211,238,0.6);
+}
+.bar-fill.amaterasu {
+  background: linear-gradient(90deg, #1a0000, #8b0000, #4a0000);
+  box-shadow: 0 0 12px rgba(139,0,0,0.6);
+}
+
+/* Pose label under power bar */
+.pose-label {
+  font-size: 0.55rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  opacity: 0.5;
+  margin-top: 2px;
+  min-height: 1em;
+  transition: opacity 0.3s;
+}
+
+/* Instructions */
+.instructions {
+  bottom: 100px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 12px 30px;
+  flex-wrap: wrap; justify-content: center;
+  max-width: 750px;
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  opacity: 0.4;
+  transition: opacity 2s ease;
+}
+.instructions.fade { opacity: 0; }
+
+.instructions .inst-item {
+  display: flex; align-items: center; gap: 8px;
+}
+.instructions .dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+}
+.instructions .dot.blue { background: #00d4ff; box-shadow: 0 0 8px #00d4ff; }
+.instructions .dot.purple { background: #a855f7; box-shadow: 0 0 8px #a855f7; }
+.instructions .dot.orange { background: #ff6a00; box-shadow: 0 0 8px #ff6a00; }
+.instructions .dot.cyan { background: #22d3ee; box-shadow: 0 0 8px #22d3ee; }
+.instructions .dot.darkred { background: #8b0000; box-shadow: 0 0 8px #8b0000; }
+.instructions .dot.pink { background: #ec4899; box-shadow: 0 0 8px #ec4899; }
+
+/* Screen shake */
+.shake {
+  animation: shake 0.15s ease-in-out;
+}
+@keyframes shake {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(-3px, 2px); }
+  50% { transform: translate(3px, -2px); }
+  75% { transform: translate(-2px, -3px); }
+}
+
+/* Cinematic letterbox bars */
+.letterbox {
+  position: fixed; left: 0; right: 0;
+  height: 0; background: #000;
+  z-index: 55; pointer-events: none;
+  transition: height 0.4s ease;
+}
+.letterbox.top { top: 0; }
+.letterbox.bottom { bottom: 0; }
+.letterbox.active { height: 40px; }
+
+/* Flash overlay */
+#flash {
+  position: fixed; inset: 0;
+  background: white; opacity: 0;
+  pointer-events: none; z-index: 60;
+  transition: opacity 0.05s ease;
+}
