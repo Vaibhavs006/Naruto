@@ -1,68 +1,73 @@
-// ─── Character Definitions ───
-
+// Character definitions with poses, jutsu, colors, and particle effects
 const CHARACTERS = {
   naruto: {
     name: 'Naruto',
-    title: 'The Seventh Hokage',
     emoji: '🍥',
-    accent: '#ff6a00',
-    accentGlow: '#ffaa00',
-    accentRGB: '255,106,0',
-    skeleton: { base: '#ff8c00', glow: '#ffbb33' },
+    theme: 'naruto',
+    primaryColor: '#ff6b00',
+    particleColor: '#ff8c00',
     poses: ['open', 'fist', 'peace'],
-    jutsu: {
-      open:  'Rasengan',
-      fist:  'Fireball',
-      peace: 'Shadow Clone'
-    },
-    barClass: {
-      open:  'rasengan',
-      fist:  'fireball',
-      peace: 'shadowclone',
-      none:  'rasengan'
-    },
-    particleColors: {
-      open:  '#00e5ff',
-      fist:  '#ff4500',
-      peace: '#a5f3fc'
-    }
+    jutsu: [
+      { name: 'Rasengan', pose: 'open', fx: 'rasengan', effect: 'video' },
+      { name: 'Fireball', pose: 'fist', fx: 'fireball', effect: 'canvas' },
+      { name: 'Shadow Clone', pose: 'peace', fx: 'shadowClone', effect: 'canvas' }
+    ]
   },
   sasuke: {
     name: 'Sasuke',
-    title: 'The Shadow Hokage',
     emoji: '⚡',
-    accent: '#a855f7',
-    accentGlow: '#c084fc',
-    accentRGB: '168,85,247',
-    skeleton: { base: '#a855f7', glow: '#c084fc' },
+    theme: 'sasuke',
+    primaryColor: '#8b00ff',
+    particleColor: '#aa33ff',
     poses: ['open', 'fist', 'point'],
-    jutsu: {
-      open:  'Chidori',
-      fist:  'Fireball',
-      point: 'Amaterasu'
-    },
-    barClass: {
-      open:  'chidori',
-      fist:  'fireball',
-      point: 'amaterasu',
-      none:  'chidori'
-    },
-    particleColors: {
-      open:  '#c084fc',
-      fist:  '#ff4500',
-      point: '#2d0000'
-    }
+    jutsu: [
+      { name: 'Chidori', pose: 'open', fx: 'chidori', effect: 'video' },
+      { name: 'Fireball', pose: 'fist', fx: 'fireball', effect: 'canvas' },
+      { name: 'Amaterasu', pose: 'point', fx: 'amaterasu', effect: 'canvas' }
+    ]
   },
   kakashi: {
     name: 'Kakashi',
-    title: 'The Copy Ninja',
     emoji: '📖',
-    accent: '#94a3b8',
-    accentGlow: '#cbd5e1',
-    accentRGB: '148,163,184',
-    skeleton: { base: '#94a3b8', glow: '#e2e8f0' },
+    theme: 'kakashi',
+    primaryColor: '#a0a0a0',
+    particleColor: '#d0d0d0',
     poses: ['open', 'point', 'peace'],
-    jutsu: {
+    jutsu: [
+      { name: 'Lightning Blade', pose: 'open', fx: 'lightningBlade', effect: 'canvas' },
+      { name: 'Amaterasu', pose: 'point', fx: 'amaterasu', effect: 'canvas' },
+      { name: 'Shadow Clone', pose: 'peace', fx: 'shadowClone', effect: 'canvas' }
+    ]
+  },
+  sakura: {
+    name: 'Sakura',
+    emoji: '🌸',
+    theme: 'sakura',
+    primaryColor: '#ff69b4',
+    particleColor: '#ff85c1',
+    poses: ['open', 'fist', 'peace'],
+    jutsu: [
+      { name: 'Cherry Blossom', pose: 'open', fx: 'cherryBlossom', effect: 'canvas' },
+      { name: 'Chakra Punch', pose: 'fist', fx: 'chakraPunch', effect: 'canvas' },
+      { name: 'Healing', pose: 'peace', fx: 'healing', effect: 'canvas' }
+    ]
+  },
+  itachi: {
+    name: 'Itachi',
+    emoji: '🌙',
+    theme: 'itachi',
+    primaryColor: '#8b0000',
+    particleColor: '#ff4444',
+    poses: ['open', 'fist', 'point'],
+    jutsu: [
+      { name: 'Tsukuyomi', pose: 'open', fx: 'tsukuyomi', effect: 'canvas' },
+      { name: 'Fireball', pose: 'fist', fx: 'fireball', effect: 'canvas' },
+      { name: 'Amaterasu', pose: 'point', fx: 'amaterasu', effect: 'canvas' }
+    ]
+  }
+};
+
+export default CHARACTERS;
       open:  'Lightning Blade',
       point: 'Amaterasu',
       peace: 'Shadow Clone'
