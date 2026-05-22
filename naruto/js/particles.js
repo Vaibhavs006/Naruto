@@ -1,55 +1,75 @@
-// ─── Particle System ───
-
-const pCanvas = document.getElementById('particles');
-const pCtx    = pCanvas.getContext('2d');
-
-let particles = [];
-
+// Particle system for chakra effects
 class Particle {
-  constructor(x, y, color) {
+  constructor(x, y, color, vx, vy, life = 1) {
     this.x = x;
     this.y = y;
-    this.vx = (Math.random() - 0.5) * 4;
-    this.vy = (Math.random() - 0.5) * 4 - 1;
-    this.life = 1;
-    this.decay = 0.015 + Math.random() * 0.025;
-    this.size = 1.5 + Math.random() * 3;
     this.color = color;
+    this.vx = vx;
+    this.vy = vy;
+    this.life = life;
+    this.maxLife = life;
+    this.size = Math.random() * 4 + 2;
   }
 
   update() {
     this.x += this.vx;
     this.y += this.vy;
-    this.vy -= 0.02; // float upward
-    this.life -= this.decay;
+    this.vy += 0.15; // gravity
+    this.life -= 0.02;
   }
 
-  draw(c) {
-    if (this.life <= 0) return;
-    c.save();
-    c.globalAlpha = this.life * 0.8;
-    c.shadowBlur = 10;
-    c.shadowColor = this.color;
-    c.fillStyle = this.color;
-    c.beginPath();
-    c.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-    c.fill();
-    c.restore();
+  draw(ctx) {
+    const alpha = (this.life / this.maxLife) * 0.6;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
   }
-}
 
-function spawnParticles(nx, ny, color, count = 3) {
-  const sx = nx * pCanvas.width;
-  const sy = ny * pCanvas.height;
-  for (let i = 0; i < count; i++) {
-    particles.push(new Particle(sx, sy, color));
+  isDead() {
+    return this.life <= 0;
   }
 }
 
-function tickParticles() {
-  pCanvas.width  = window.innerWidth;
-  pCanvas.height = window.innerHeight;
-  pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
-  particles = particles.filter(p => p.life > 0);
-  particles.forEach(p => { p.update(); p.draw(pCtx); });
+class ParticleSystem {
+  constructor() {
+    this.particles = [];
+  }
+
+  spawn(x, y, color, count = 10, speed = 3) {
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.random() * Math.PI * 2);
+      const vel = Math.random() * speed;
+      const vx = Math.cos(angle) * vel;
+      const vy = Math.sin(angle) * vel - 1;
+      this.particles.push(new Particle(x, y, color, vx, vy));
+    }
+  }
+
+  spawnBurst(x, y, color, count = 20, speed = 5) {
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2;
+      const vx = Math.cos(angle) * speed;
+      const vy = Math.sin(angle) * speed;
+      this.particles.push(new Particle(x, y, color, vx, vy, 0.8));
+    }
+  }
+
+  update() {
+    this.particles = this.particles.filter(p => !p.isDead());
+    this.particles.forEach(p => p.update());
+  }
+
+  draw(ctx) {
+    this.particles.forEach(p => p.draw(ctx));
+  }
+
+  clear() {
+    this.particles = [];
+  }
 }
+
+export { Particle, ParticleSystem };
