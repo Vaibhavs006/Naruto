@@ -1,68 +1,384 @@
-/* ─── Reset ─── */
-*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&display=swap');
 
 :root {
-  --accent: #ff6a00;
-  --accent-glow: #ffaa00;
-  --accent-rgb: 255,106,0;
+  --primary-color: #00d4ff;
+  --secondary-color: #ff6b00;
+  --accent-color: #00fbff;
+  --dark-bg: #0a0500;
+  --ui-bg: rgba(0, 20, 40, 0.8);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 body {
-  overflow: hidden;
-  background: #000;
   font-family: 'Cinzel', serif;
-  user-select: none;
+  background-color: var(--dark-bg);
+  color: #fff;
+  overflow: hidden;
+  width: 100vw;
+  height: 100vh;
 }
 
-/* ═══════════════════════════════════════════
-   CHARACTER SELECT SCREEN
-   ═══════════════════════════════════════════ */
-#charSelect {
-  position: fixed; inset: 0; z-index: 2000;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  background: radial-gradient(ellipse at center, #0d0d0d 0%, #000 80%);
-  transition: opacity 0.6s ease, visibility 0.6s ease;
-}
-#charSelect.hide {
-  opacity: 0; visibility: hidden; pointer-events: none;
+/* ===== VIDEO & CANVAS ===== */
+#v_src, #out {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+  transform: scaleX(-1);
 }
 
-.select-title {
-  font-size: clamp(1.4rem, 4vw, 3rem);
-  font-weight: 900;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  background: linear-gradient(135deg, #ff6a00, #ffcc00, #ff6a00);
-  background-size: 200% 200%;
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: shimmer 2.5s ease infinite;
-  margin-bottom: 0.4rem;
+#out {
+  z-index: 2;
+  pointer-events: none;
 }
 
-.select-subtitle {
-  font-size: clamp(0.6rem, 1.2vw, 0.85rem);
-  color: rgba(255,200,150,0.4);
-  letter-spacing: 0.4em;
-  text-transform: uppercase;
-  margin-bottom: 2.5rem;
+/* ===== DARKNESS OVERLAY ===== */
+.darkness {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(10, 5, 0, 0.3);
+  mix-blend-mode: multiply;
+  pointer-events: none;
+  z-index: 5;
 }
 
-/* Card grid */
-.char-grid {
+/* ===== JUTSU FX VIDEOS ===== */
+.fx {
+  position: absolute;
+  height: auto;
+  top: 0;
+  left: 0;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  display: none;
+  mix-blend-mode: screen;
+  z-index: 20;
+}
+
+#naruto-fx {
+  width: 1600px;
+}
+
+#sasuke-fx {
+  width: 2400px;
+}
+
+/* ===== CHARACTER SELECT SCREEN ===== */
+#character-select {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(135deg, #0a0500 0%, #1a0a05 50%, #0d0803 100%);
   display: flex;
-  gap: 20px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
-  max-width: 900px;
-  padding: 0 20px;
+  z-index: 1000;
+  backdrop-filter: blur(10px);
 }
 
-/* Individual card */
+#character-select.hidden {
+  display: none;
+}
+
+.char-select-title {
+  font-size: 4rem;
+  font-weight: 900;
+  margin-bottom: 1rem;
+  background: linear-gradient(90deg, #00fbff, #ff6b00);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 0 30px rgba(0, 251, 255, 0.5);
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.2); }
+}
+
+.char-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 2rem;
+  padding: 2rem;
+  max-width: 1200px;
+}
+
 .char-card {
+  cursor: pointer;
+  transition: all 0.3s ease;
+  padding: 1.5rem;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  text-align: center;
+  background: rgba(0, 20, 40, 0.6);
+  backdrop-filter: blur(5px);
+}
+
+.char-card:hover {
+  transform: translateY(-10px);
+  border-color: var(--accent-color);
+  background: rgba(0, 251, 255, 0.1);
+}
+
+.char-card.naruto {
+  --char-color: #ff6b00;
+}
+
+.char-card.sasuke {
+  --char-color: #8b00ff;
+}
+
+.char-card.kakashi {
+  --char-color: #silver;
+}
+
+.char-card.sakura {
+  --char-color: #ff69b4;
+}
+
+.char-card.itachi {
+  --char-color: #8b0000;
+}
+
+.char-emoji {
+  font-size: 3rem;
+  margin-bottom: 0.5rem;
+}
+
+.char-name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--char-color);
+  margin-bottom: 0.5rem;
+}
+
+.char-poses {
+  font-size: 0.9rem;
+  color: #aaa;
+  margin-bottom: 0.5rem;
+}
+
+.char-jutsu {
+  font-size: 0.75rem;
+  color: #888;
+  line-height: 1.4;
+}
+
+/* ===== HUD ===== */
+#hud {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.hand-hud {
+  position: absolute;
+  width: 300px;
+}
+
+.hand-hud.left {
+  left: 20px;
+  top: 20px;
+}
+
+.hand-hud.right {
+  right: 20px;
+  top: 20px;
+}
+
+.hand-label {
+  font-size: 0.8rem;
+  color: var(--accent-color);
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.power-bar-bg {
+  width: 100%;
+  height: 20px;
+  background: rgba(0, 20, 40, 0.8);
+  border: 1px solid var(--accent-color);
+  border-radius: 4px;
+  overflow: hidden;
   position: relative;
-  width: 140px;
+}
+
+.power-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+  width: 0%;
+  transition: width 0.1s ease;
+  box-shadow: 0 0 10px var(--primary-color);
+}
+
+.jutsu-name {
+  font-size: 0.7rem;
+  color: #aaa;
+  margin-top: 0.3rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  min-height: 14px;
+}
+
+.instruction {
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  background: rgba(0, 20, 40, 0.9);
+  padding: 1rem 1.5rem;
+  border: 1px solid var(--accent-color);
+  border-radius: 8px;
+  z-index: 15;
+  max-width: 500px;
+}
+
+.instruction-text {
+  font-size: 0.9rem;
+  color: var(--accent-color);
+  line-height: 1.6;
+}
+
+/* ===== CHARACTER THEME COLORS ===== */
+body.theme-naruto {
+  --primary-color: #ff6b00;
+  --secondary-color: #ffaa00;
+  --accent-color: #ff8c00;
+}
+
+body.theme-sasuke {
+  --primary-color: #8b00ff;
+  --secondary-color: #5500cc;
+  --accent-color: #aa33ff;
+}
+
+body.theme-kakashi {
+  --primary-color: #a0a0a0;
+  --secondary-color: #707070;
+  --accent-color: #d0d0d0;
+}
+
+body.theme-sakura {
+  --primary-color: #ff69b4;
+  --secondary-color: #ff1493;
+  --accent-color: #ff85c1;
+}
+
+body.theme-itachi {
+  --primary-color: #8b0000;
+  --secondary-color: #aa0000;
+  --accent-color: #ff4444;
+}
+
+/* ===== EFFECTS & ANIMATIONS ===== */
+@keyframes screen-shake {
+  0% { transform: translate(0, 0); }
+  25% { transform: translate(-3px, -3px); }
+  50% { transform: translate(3px, 3px); }
+  75% { transform: translate(-3px, 3px); }
+  100% { transform: translate(0, 0); }
+}
+
+.shake {
+  animation: screen-shake 0.1s ease-in-out;
+}
+
+@keyframes flash {
+  0% { opacity: 0.3; }
+  50% { opacity: 1; }
+  100% { opacity: 0.3; }
+}
+
+.flash {
+  animation: flash 0.2s ease-in-out;
+}
+
+/* ===== VIGNETTE ===== */
+.vignette {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 8;
+  box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.8);
+}
+
+/* ===== LETTERBOX ===== */
+.letterbox {
+  position: fixed;
+  pointer-events: none;
+  background: #000;
+  z-index: 7;
+}
+
+.letterbox.top {
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 60px;
+}
+
+.letterbox.bottom {
+  bottom: 0;
+  left: 0;
+  width: 100vw;
+  height: 60px;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  .char-select-title {
+    font-size: 2.5rem;
+  }
+
+  .char-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1rem;
+  }
+
+  .hand-hud {
+    width: 200px;
+  }
+
+  .hand-hud.left {
+    left: 10px;
+    top: 10px;
+  }
+
+  .hand-hud.right {
+    right: 10px;
+    top: 10px;
+  }
+
+  .instruction {
+    bottom: 20px;
+    padding: 0.75rem 1rem;
+    font-size: 0.8rem;
+  }
+}
   padding: 28px 16px 20px;
   border: 1px solid rgba(255,255,255,0.06);
   border-radius: 16px;
