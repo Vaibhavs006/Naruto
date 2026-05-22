@@ -1,68 +1,291 @@
-// ─── Main Entry Point ───
-// Depends on: characters.js, particles.js, effects.js, handTracking.js, hud.js
-// Depends on: MediaPipe (hands, camera_utils, drawing_utils)
+// Main entry point - character select, game loop, MediaPipe setup
+import CHARACTERS from './characters.js';
+import { ParticleSystem } from './particles.js';
+import * as Effects from './effects.js';
+import { classifyPose, getHandCenter, getFingerTips } from './handTracking.js';
+import HUD from './hud.js';
 
-const vElement = document.getElementById('v_src');
-const cElement = document.getElementById('out');
-const ctx      = cElement.getContext('2d');
-const nVid     = document.getElementById('n');
-const sVid     = document.getElementById('s');
+let currentCharacter = null;
+let selectedCharacterKey = null;
+let hands = null;
+let camera = null;
+let particles = new ParticleSystem();
+let hud = null;
+let gameActive = false;
 
-// ─── State ───
-let pwr      = [0, 0];
-let wasPose  = ['none', 'none'];
-let curPose  = ['none', 'none'];
-let gameStarted = false;
+const videoElement = document.getElementById('v_src');
+const canvasElement = document.getElementById('out');
+const ctx = canvasElement.getContext('2d');
 
-const VIDEO_POSES = ['open'];
+const narutoFx = document.getElementById('naruto-fx');
+const sasukeFx = document.getElementById('sasuke-fx');
 
-// ═══════════════════════════════════════════
-// CHARACTER SELECT
-// ═══════════════════════════════════════════
+let handStates = {
+  left: { pose: 'unknown', power: 0, wasActive: false, chargeTime: 0 },
+  right: { pose: 'unknown', power: 0, wasActive: false, chargeTime: 0 }
+};
 
-function buildCharacterCards() {
-  const grid = document.getElementById('charGrid');
-  Object.entries(CHARACTERS).forEach(([id, char]) => {
+// ===== CHARACTER SELECT UI =====
+function showCharacterSelect() {
+  const selectScreen = document.getElementById('character-select');
+  const charGrid = selectScreen.querySelector('.char-grid');
+  charGrid.innerHTML = '';
+
+  Object.entries(CHARACTERS).forEach(([key, char]) => {
     const card = document.createElement('div');
-    card.className = 'char-card';
-    card.dataset.char = id;
-
-    const jutsuTags = Object.values(char.jutsu)
-      .map(j => `<span class="jutsu-tag">${j}</span>`).join('');
-
+    card.className = `char-card ${key}`;
     card.innerHTML = `
       <div class="char-emoji">${char.emoji}</div>
       <div class="char-name">${char.name}</div>
-      <div class="char-role">${char.title}</div>
-      <div class="char-jutsu-list">${jutsuTags}</div>
+      <div class="char-poses">${char.poses.join(' • ')}</div>
+      <div class="char-jutsu">
+        ${char.jutsu.map(j => `<div>${j.name}</div>`).join('')}
+      </div>
     `;
-
-    card.addEventListener('click', () => onCharacterSelected(id));
-    grid.appendChild(card);
+    card.addEventListener('click', () => selectCharacter(key));
+    charGrid.appendChild(card);
   });
+
+  selectScreen.classList.remove('hidden');
 }
 
-function onCharacterSelected(id) {
-  selectCharacter(id);
+function selectCharacter(key) {
+  selectedCharacterKey = key;
+  currentCharacter = CHARACTERS[key];
+  document.body.className = `theme-${currentCharacter.theme}`;
 
-  // Update loading screen with character name
-  const loadingTitle = document.querySelector('#loading h1');
-  loadingTitle.textContent = selectedCharacter.name;
+  const selectScreen = document.getElementById('character-select');
+  selectScreen.classList.add('hidden');
 
-  // Update loading title gradient to character accent
-  loadingTitle.style.background = `linear-gradient(135deg, ${selectedCharacter.accent}, ${selectedCharacter.accentGlow}, ${selectedCharacter.accent})`;
-  loadingTitle.style.backgroundSize = '200% 200%';
-  loadingTitle.style.webkitBackgroundClip = 'text';
-  loadingTitle.style.webkitTextFillColor = 'transparent';
-  loadingTitle.style.backgroundClip = 'text';
-  loadingTitle.style.animation = 'shimmer 2.5s ease infinite';
+  // Initialize game
+  initializeGame();
+  startGame();
+}
 
-  // Update loader ring color
-  const ring = document.querySelector('.loader-ring');
-  ring.style.borderTopColor = selectedCharacter.accent;
+// ===== GAME INITIALIZATION =====
+async function initializeGame() {
+  if (hud === null) {
+    hud = new HUD();
+  }
 
-  // Update HUD title
-  document.querySelector('.hud-title').textContent = `${selectedCharacter.name} — Hand Jutsu`;
+  canvasElement.width = videoElement.videoWidth || window.innerWidth;
+  canvasElement.height = videoElement.videoHeight || window.innerHeight;
+
+  if (hands === null) {
+    hands = new Hands({
+      locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`
+    });
+
+    hands.setOptions({
+      maxNumHands: 2,
+      modelComplexity: 1,
+      minDetectionConfidence: 0.65,
+      minTrackingConfidence: 0.65
+    });
+
+    hands.onResults(onHandResults);
+  }
+
+  if (camera === null) {
+    camera = new Camera(videoElement, {
+      onFrame: async () => {
+        if (hands) await hands.send({ image: videoElement });
+      },
+      width: 1280,
+      height: 720
+    });
+    camera.start();
+  }
+
+  gameActive = true;
+  hud.show();
+}
+
+// ===== HAND RESULTS CALLBACK =====
+function onHandResults(results) {
+  canvasElement.width = videoElement.videoWidth;
+  canvasElement.height = videoElement.videoHeight;
+
+  ctx.save();
+  ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+
+  narutoFx.style.display = 'none';
+  sasukeFx.style.display = 'none';
+
+  let handDetected = { left: false, right: false };
+
+  if (results.multiHandLandmarks && results.multiHandedness) {
+    results.multiHandLandmarks.forEach((landmarks, i) => {
+      const handedness = results.multiHandedness[i].label;
+      const isRight = handedness === 'Right';
+      const handKey = isRight ? 'right' : 'left';
+
+      handDetected[handKey] = true;
+
+      // Draw skeleton
+      Effects.drawHandSkeleton(ctx, landmarks, currentCharacter.primaryColor);
+
+      // Classify pose
+      const pose = classifyPose(landmarks);
+      handStates[handKey].pose = pose;
+
+      // Find matching jutsu
+      const matchingJutsu = currentCharacter.jutsu.find(j => j.pose === pose);
+      const isValidPose = currentCharacter.poses.includes(pose);
+
+      if (isValidPose && matchingJutsu) {
+        handStates[handKey].power = Math.min(1, handStates[handKey].power + 0.08);
+        handStates[handKey].chargeTime++;
+
+        // Update HUD
+        hud.updatePowerBar(isRight, handStates[handKey].power);
+        hud.updateJutsuLabel(isRight, matchingJutsu.name);
+
+        // Spawn particles from fingertips
+        if (handStates[handKey].chargeTime % 3 === 0) {
+          const fingertips = getFingerTips(landmarks);
+          fingertips.forEach(tip => {
+            particles.spawn(tip.x, tip.y, currentCharacter.particleColor, 3, 2);
+          });
+        }
+
+        // Trigger jutsu effects at power threshold
+        if (handStates[handKey].power > 0.3 && !handStates[handKey].wasActive) {
+          triggerJutsuEffect(isRight, matchingJutsu, landmarks);
+          handStates[handKey].wasActive = true;
+          Effects.applyScreenShake(canvasElement);
+        }
+
+        // Draw jutsu effect on canvas
+        const handCenter = getHandCenter(landmarks);
+        drawJutsuEffect(ctx, matchingJutsu.fx, handCenter.x, handCenter.y, handStates[handKey].power);
+
+      } else {
+        handStates[handKey].power = Math.max(0, handStates[handKey].power - 0.1);
+        handStates[handKey].chargeTime = 0;
+        handStates[handKey].wasActive = false;
+        hud.updateJutsuLabel(isRight, '');
+      }
+    });
+  }
+
+  // Decay power when hand not detected
+  if (!handDetected.left) {
+    handStates.left.power = Math.max(0, handStates.left.power - 0.1);
+    handStates.left.chargeTime = 0;
+    handStates.left.wasActive = false;
+    hud.updateJutsuLabel(false, '');
+  }
+  if (!handDetected.right) {
+    handStates.right.power = Math.max(0, handStates.right.power - 0.1);
+    handStates.right.chargeTime = 0;
+    handStates.right.wasActive = false;
+    hud.updateJutsuLabel(true, '');
+  }
+
+  // Update particle system
+  particles.update();
+  particles.draw(ctx);
+
+  ctx.restore();
+}
+
+// ===== DRAW JUTSU EFFECTS ON CANVAS =====
+function drawJutsuEffect(ctx, effectType, x, y, power) {
+  const color = currentCharacter.primaryColor;
+
+  switch (effectType) {
+    case 'rasengan':
+    case 'chidori':
+      Effects.drawFireball(ctx, x, y, power, color);
+      break;
+    case 'fireball':
+      Effects.drawFireball(ctx, x, y, power, '#ff6b00');
+      break;
+    case 'shadowClone':
+      for (let i = 0; i < 3; i++) {
+        Effects.drawShadowClone(ctx, x, y, (i - 1) * 60, 0, power);
+      }
+      break;
+    case 'amaterasu':
+      Effects.drawAmaterasu(ctx, x, y, power);
+      break;
+    case 'lightningBlade':
+      Effects.drawLightningBlade(ctx, x, y - 50, x, y + 100, power);
+      break;
+    case 'cherryBlossom':
+      Effects.drawCherryBlossom(ctx, x, y, power);
+      break;
+    case 'chakraPunch':
+      Effects.drawChakraPunch(ctx, x, y, power, color);
+      break;
+    case 'healing':
+      Effects.drawHealing(ctx, x, y, power);
+      break;
+    case 'tsukuyomi':
+      Effects.drawTsukuyomi(ctx, x, y, power);
+      break;
+  }
+}
+
+// ===== TRIGGER JUTSU EFFECT (VIDEO + PARTICLES) =====
+function triggerJutsuEffect(isRight, jutsu, landmarks) {
+  const handCenter = getHandCenter(landmarks);
+  const fingertips = getFingerTips(landmarks);
+
+  // Burst particles
+  particles.spawnBurst(handCenter.x, handCenter.y, currentCharacter.particleColor, 25, 4);
+
+  // Handle video effects
+  if (jutsu.effect === 'video') {
+    const videoElem = selectedCharacterKey === 'naruto' ? narutoFx : sasukeFx;
+    videoElem.currentTime = 0;
+    videoElem.play();
+
+    if (isRight) {
+      sasukeFx.style.left = (1 - handCenter.x) * window.innerWidth + 'px';
+      sasukeFx.style.top = handCenter.y * window.innerHeight + 'px';
+      sasukeFx.style.display = 'block';
+      sasukeFx.style.opacity = '0.8';
+    } else {
+      narutoFx.style.left = (1 - handCenter.x) * window.innerWidth + 'px';
+      narutoFx.style.top = handCenter.y * window.innerHeight + 'px';
+      narutoFx.style.display = 'block';
+      narutoFx.style.opacity = '0.8';
+    }
+  }
+
+  Effects.applyFlash(canvasElement);
+}
+
+// ===== GAME LOOP & STARTUP =====
+function startGame() {
+  hud.updateInstruction(`Playing as ${currentCharacter.name}. Make a ${currentCharacter.poses.join(', ')} sign!`);
+  gameActive = true;
+}
+
+function backToCharacterSelect() {
+  gameActive = false;
+  if (hud) hud.hide();
+  particles.clear();
+  showCharacterSelect();
+}
+
+// ===== EVENT LISTENERS =====
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && gameActive) {
+    backToCharacterSelect();
+  }
+});
+
+// ===== INITIALIZATION =====
+window.addEventListener('load', () => {
+  showCharacterSelect();
+});
+
+// Make functions available globally if needed
+window.selectCharacter = selectCharacter;
+window.backToCharacterSelect = backToCharacterSelect;
 
   // Update instructions for this character's available poses
   updateInstructionsForCharacter();
