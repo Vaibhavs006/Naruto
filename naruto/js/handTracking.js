@@ -1,68 +1,94 @@
-// ─── Hand Pose Detection ───
-// MediaPipe hand landmarks:
-//  0=wrist, 4=thumb_tip, 8=index_tip, 12=middle_tip, 16=ring_tip, 20=pinky_tip
-//  5=index_mcp, 6=index_pip, 9=middle_mcp, 10=middle_pip
-//  13=ring_mcp, 14=ring_pip, 17=pinky_mcp, 18=pinky_pip
+// Hand pose detection and classification
+function classifyPose(landmarks) {
+  if (!landmarks || landmarks.length < 21) return 'unknown';
 
-/**
- * Check if a finger is extended by comparing tip-to-wrist vs pip-to-wrist distance.
- */
-function isFingerExtended(pts, tipIdx, pipIdx) {
-  const wrist = pts[0];
-  const tip = pts[tipIdx];
-  const pip = pts[pipIdx];
-  return Math.hypot(tip.x - wrist.x, tip.y - wrist.y) >
-         Math.hypot(pip.x - wrist.x, pip.y - wrist.y);
+  const wrist = landmarks[0];
+  const mcp = [landmarks[5], landmarks[9], landmarks[13], landmarks[17]];
+  const pip = [landmarks[6], landmarks[10], landmarks[14], landmarks[18]];
+  const dip = [landmarks[7], landmarks[11], landmarks[15], landmarks[19]];
+  const tip = [landmarks[8], landmarks[12], landmarks[16], landmarks[20]];
+  const thumbTip = landmarks[4];
+  const thumbMcp = landmarks[2];
+  const indexTip = landmarks[8];
+  const middleTip = landmarks[12];
+
+  // Helper: Check if finger is extended
+  const isFingerExtended = (tipIdx, mcpIdx, pipIdx, dipIdx) => {
+    const tipPoint = landmarks[tipIdx];
+    const mcpPoint = landmarks[mcpIdx];
+    const pipPoint = landmarks[pipIdx];
+    const dipPoint = landmarks[dipIdx];
+
+    const tipToPip = Math.hypot(tipPoint.x - pipPoint.x, tipPoint.y - pipPoint.y);
+    const pipToDip = Math.hypot(pipPoint.x - dipPoint.x, pipPoint.y - dipPoint.y);
+
+    return tipToPip > pipToDip * 0.8;
+  };
+
+  // Helper: Check thumb is extended
+  const isThumbExtended = () => {
+    const thumbTipPt = landmarks[4];
+    const thumbMcpPt = landmarks[2];
+    const distance = Math.hypot(thumbTipPt.x - thumbMcpPt.x, thumbTipPt.y - thumbMcpPt.y);
+    return distance > 0.05;
+  };
+
+  const indexExtended = isFingerExtended(8, 5, 6, 7);
+  const middleExtended = isFingerExtended(12, 9, 10, 11);
+  const ringExtended = isFingerExtended(16, 13, 14, 15);
+  const pinkyExtended = isFingerExtended(20, 17, 18, 19);
+  const thumbExtended = isThumbExtended();
+
+  // OPEN: All fingers extended
+  if (indexExtended && middleExtended && ringExtended && pinkyExtended && thumbExtended) {
+    return 'open';
+  }
+
+  // PEACE: Index and middle extended, others closed
+  if (indexExtended && middleExtended && !ringExtended && !pinkyExtended && !thumbExtended) {
+    return 'peace';
+  }
+
+  // POINT: Only index extended
+  if (indexExtended && !middleExtended && !ringExtended && !pinkyExtended && !thumbExtended) {
+    return 'point';
+  }
+
+  // FIST: All fingers closed
+  if (!indexExtended && !middleExtended && !ringExtended && !pinkyExtended && !thumbExtended) {
+    return 'fist';
+  }
+
+  return 'unknown';
 }
 
-/**
- * Returns an array of booleans [index, middle, ring, pinky] extended states.
- */
-function getFingerStates(pts) {
+function getHandCenter(landmarks) {
+  if (!landmarks || landmarks.length < 21) return { x: 0, y: 0 };
+
+  let sumX = 0, sumY = 0;
+  for (let i = 0; i < landmarks.length; i++) {
+    sumX += landmarks[i].x;
+    sumY += landmarks[i].y;
+  }
+  return {
+    x: sumX / landmarks.length,
+    y: sumY / landmarks.length
+  };
+}
+
+function getFingerTips(landmarks) {
+  if (!landmarks || landmarks.length < 21) return [];
+
   return [
-    isFingerExtended(pts, 8, 6),   // index
-    isFingerExtended(pts, 12, 10), // middle
-    isFingerExtended(pts, 16, 14), // ring
-    isFingerExtended(pts, 20, 18)  // pinky
+    landmarks[4],  // Thumb
+    landmarks[8],  // Index
+    landmarks[12], // Middle
+    landmarks[16], // Ring
+    landmarks[20]  // Pinky
   ];
 }
 
-/**
- * Checks if a detected hand is in an "open" position.
- * Returns true if 3+ fingers are extended.
- */
-function checkOpen(pts) {
-  const fingers = getFingerStates(pts);
-  const count = fingers.filter(Boolean).length;
-  return count >= 3;
-}
-
-/**
- * Checks if hand is making a fist (0-1 fingers extended).
- */
-function checkFist(pts) {
-  const fingers = getFingerStates(pts);
-  const count = fingers.filter(Boolean).length;
-  return count <= 1 && !fingers[0]; // no index finger
-}
-
-/**
- * Checks if hand is making a peace/victory sign (index + middle extended, ring + pinky curled).
- */
-function checkPeace(pts) {
-  const [index, middle, ring, pinky] = getFingerStates(pts);
-  return index && middle && !ring && !pinky;
-}
-
-/**
- * Checks if hand is pointing (only index finger extended).
- */
-function checkPoint(pts) {
-  const [index, middle, ring, pinky] = getFingerStates(pts);
-  return index && !middle && !ring && !pinky;
-}
-
-/**
+export { classifyPose, getHandCenter, getFingerTips };
  * Classify the current hand pose.
  * Priority: peace > point > fist > open > none
  * (check specific poses before general ones)
