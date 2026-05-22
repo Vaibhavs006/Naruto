@@ -1,68 +1,245 @@
-// ─── Visual Effects ───
-
-const flash   = document.getElementById('flash');
-const letterT = document.querySelector('.letterbox.top');
-const letterB = document.querySelector('.letterbox.bottom');
-
-let shaking = false;
-
-function doFlash() {
-  flash.style.opacity = '0.25';
-  setTimeout(() => flash.style.opacity = '0', 80);
-}
-
-function doShake() {
-  if (shaking) return;
-  shaking = true;
-  document.body.classList.add('shake');
-  setTimeout(() => {
-    document.body.classList.remove('shake');
-    shaking = false;
-  }, 150);
-}
-
-function setLetterbox(active) {
-  letterT.classList.toggle('active', active);
-  letterB.classList.toggle('active', active);
-}
-
-// ─── Draw hand skeleton with dynamic glow ───
-// Uses selectedCharacter from characters.js for skeleton colors
-function drawHand(ctx, pts, power, isRight, pose) {
-  let baseColor, glowColor;
-
-  if (selectedCharacter) {
-    baseColor = selectedCharacter.skeleton.base;
-    glowColor = selectedCharacter.skeleton.glow;
-  } else {
-    baseColor = '#666';
-    glowColor = '#999';
-  }
-
-  const glowSize = 8 + power * 25;
-
+// Jutsu effects drawing functions
+function drawHandSkeleton(ctx, landmarks, color = '#00d4ff') {
   ctx.save();
-  ctx.shadowBlur  = glowSize;
-  ctx.shadowColor = glowColor;
-  drawConnectors(ctx, pts, HAND_CONNECTIONS, { color: baseColor, lineWidth: 2 + power * 2 });
-  drawLandmarks(ctx, pts, { color: '#ffffff', lineWidth: 1, radius: 1.5 + power * 1.5 });
-  ctx.restore();
+  ctx.shadowBlur = 10;
+  ctx.shadowColor = color;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 3;
+  ctx.fillStyle = '#ffffff';
 
-  // extra glow pass at high power
-  if (power > 0.5) {
-    ctx.save();
-    ctx.globalAlpha = (power - 0.5) * 0.6;
-    ctx.shadowBlur  = 40;
-    ctx.shadowColor = glowColor;
-    drawConnectors(ctx, pts, HAND_CONNECTIONS, { color: glowColor, lineWidth: 1 });
-    ctx.restore();
-  }
+  // Draw connections
+  const HAND_CONNECTIONS = [
+    [0, 1], [1, 2], [2, 3], [3, 4],
+    [0, 5], [5, 6], [6, 7], [7, 8],
+    [0, 9], [9, 10], [10, 11], [11, 12],
+    [0, 13], [13, 14], [14, 15], [15, 16],
+    [0, 17], [17, 18], [18, 19], [19, 20]
+  ];
+
+  HAND_CONNECTIONS.forEach(([start, end]) => {
+    const p1 = landmarks[start];
+    const p2 = landmarks[end];
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.stroke();
+  });
+
+  // Draw landmarks
+  landmarks.forEach((landmark) => {
+    ctx.beginPath();
+    ctx.arc(landmark.x, landmark.y, 2, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  ctx.restore();
 }
 
-// ─── Fireball Effect (canvas-drawn expanding fire ring) ───
-function drawFireball(ctx, canvasW, canvasH, pts, power) {
-  const palm = pts[9]; // middle_mcp as palm center
-  const cx = palm.x * canvasW;
+function drawFireball(ctx, centerX, centerY, power, color = '#ff6b00') {
+  ctx.save();
+  ctx.globalAlpha = power * 0.8;
+
+  // Outer ring
+  const outerRadius = 50 + power * 100;
+  const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, outerRadius);
+  gradient.addColorStop(0, color);
+  gradient.addColorStop(0.5, color + '80');
+  gradient.addColorStop(1, color + '00');
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, outerRadius, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Inner glow
+  ctx.fillStyle = color;
+  ctx.globalAlpha = power;
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, 30 + power * 30, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawShadowClone(ctx, sourceX, sourceY, offsetX, offsetY, opacity) {
+  ctx.save();
+  ctx.globalAlpha = opacity * 0.3;
+  ctx.fillStyle = '#000';
+  ctx.globalCompositeOperation = 'multiply';
+
+  // Simple clone effect - circle placeholder
+  ctx.beginPath();
+  ctx.arc(sourceX + offsetX, sourceY + offsetY, 20, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawAmaterasu(ctx, centerX, centerY, power) {
+  ctx.save();
+  ctx.globalAlpha = power * 0.6;
+  ctx.fillStyle = '#000';
+  ctx.globalCompositeOperation = 'multiply';
+
+  // Dark flames
+  const flameSize = 80 + power * 100;
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, flameSize, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Crimson glow at edges
+  ctx.globalAlpha = power * 0.4;
+  const glowGradient = ctx.createRadialGradient(centerX, centerY, flameSize * 0.7, centerX, centerY, flameSize);
+  glowGradient.addColorStop(0, '#ff000000');
+  glowGradient.addColorStop(1, '#ff0000');
+  ctx.fillStyle = glowGradient;
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, flameSize, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawLightningBlade(ctx, startX, startY, endX, endY, power) {
+  ctx.save();
+  ctx.strokeStyle = '#00ffff';
+  ctx.lineWidth = 3 + power * 5;
+  ctx.globalAlpha = power;
+
+  // Multiple lines for lightning effect
+  for (let i = 0; i < 3; i++) {
+    const offset = (Math.random() - 0.5) * 20;
+    ctx.beginPath();
+    ctx.moveTo(startX + offset, startY);
+    ctx.lineTo(endX + offset, endY);
+    ctx.stroke();
+  }
+
+  // Glow
+  ctx.shadowColor = '#00ffff';
+  ctx.shadowBlur = 20 * power;
+  ctx.strokeStyle = '#66ffff';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(startX, startY);
+  ctx.lineTo(endX, endY);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function drawCherryBlossom(ctx, centerX, centerY, power) {
+  ctx.save();
+  ctx.globalAlpha = power * 0.7;
+  ctx.fillStyle = '#ff69b4';
+
+  // Petal circles
+  for (let i = 0; i < 8; i++) {
+    const angle = (i / 8) * Math.PI * 2;
+    const distance = 30 + power * 30;
+    const x = centerX + Math.cos(angle) * distance;
+    const y = centerY + Math.sin(angle) * distance;
+    ctx.beginPath();
+    ctx.arc(x, y, 10 + power * 10, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+function drawChakraPunch(ctx, handX, handY, power, color = '#ff69b4') {
+  ctx.save();
+  ctx.globalAlpha = power;
+  const radius = 40 + power * 60;
+
+  const gradient = ctx.createRadialGradient(handX, handY, 0, handX, handY, radius);
+  gradient.addColorStop(0, color);
+  gradient.addColorStop(1, color + '00');
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.arc(handX, handY, radius, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawHealing(ctx, centerX, centerY, power) {
+  ctx.save();
+  ctx.globalAlpha = power * 0.5;
+
+  // Green glow
+  const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 100 + power * 80);
+  gradient.addColorStop(0, '#00ff00');
+  gradient.addColorStop(1, '#00ff0000');
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, 100 + power * 80, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Healing symbol (cross)
+  ctx.strokeStyle = '#00ff00';
+  ctx.lineWidth = 2;
+  ctx.globalAlpha = power * 0.7;
+  const size = 20 + power * 20;
+  ctx.beginPath();
+  ctx.moveTo(centerX - size, centerY);
+  ctx.lineTo(centerX + size, centerY);
+  ctx.moveTo(centerX, centerY - size);
+  ctx.lineTo(centerX, centerY + size);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function drawTsukuyomi(ctx, centerX, centerY, power) {
+  ctx.save();
+  ctx.globalAlpha = power * 0.6;
+
+  // Dark red spiral effect
+  ctx.strokeStyle = '#8b0000';
+  ctx.lineWidth = 2;
+  for (let i = 0; i < 5; i++) {
+    const radius = 30 + i * 15 + power * 20;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // Center glow
+  const glowGradient = ctx.createRadialGradient(centerX, centerY, 10, centerX, centerY, 80 + power * 60);
+  glowGradient.addColorStop(0, '#ff0000');
+  glowGradient.addColorStop(1, '#ff000000');
+  ctx.fillStyle = glowGradient;
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, 80 + power * 60, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function applyScreenShake(canvas) {
+  const shakeX = (Math.random() - 0.5) * 8;
+  const shakeY = (Math.random() - 0.5) * 8;
+  canvas.style.transform = `translate(${shakeX}px, ${shakeY}px)`;
+}
+
+function applyFlash(canvas) {
+  canvas.classList.add('flash');
+  setTimeout(() => canvas.classList.remove('flash'), 200);
+}
+
+export {
+  drawHandSkeleton,
+  drawFireball,
+  drawShadowClone,
+  drawAmaterasu,
+  drawLightningBlade,
+  drawCherryBlossom,
+  drawChakraPunch,
+  drawHealing,
+  drawTsukuyomi,
+  applyScreenShake,
+  applyFlash
+};
   const cy = palm.y * canvasH;
   const radius = 30 + power * 80;
   const time = Date.now() * 0.005;
